@@ -1,0 +1,115 @@
+# ============================================================
+# SERIE EMPALMADA: Valor Agregado Sector Financiero y Seguros
+# Base 2015 equivalente | 2000Q1 - 2024Q4 | 100 observaciones
+# Metodología: Empalme por cociente (ratio medio en traslape 2005Q1-2008Q4)
+# Factor de conversión base 2005 → base 2015: 0.231096 (CV = 2.620%)
+# ============================================================
+# ADVERTENCIAS ESTADÍSTICAS A DECLARAR EN EL TRABAJO:
+#  1. Quiebre metodológico implícito en 2005Q1 (SCN 2008 vs SCN 1993)
+#  2. Heteroscedasticidad entre sub-períodos:
+#       std tasas 2000-2004 = 0.90% vs std 2005-2024 = 3.11%
+#  3. Cobertura sectorial base 2005 incluye actividades inmobiliarias
+#     y servicios a empresas (más amplia que el agregado K de base 2015)
+# ============================================================
+ 
+library(tseries)
+library(forecast)
+library(urca)
+ 
+# ── Cargar datos
+datos <- read.csv("serie_empalmada_100obs.csv")
+ 
+# ── Crear objeto ts (trimestral, inicio 2000 Q1)
+va_fin <- ts(datos$va_financiero_b2015_equiv,
+             start = c(2000, 1),
+             frequency = 4)
+ 
+# ── PASO 1: IDENTIFICACIÓN
+# Gráfica de la serie en niveles
+plot(va_fin, main = "VA Sector Financiero y Seguros (base 2015 equiv.)",
+     ylab = "Miles de millones COP", xlab = "Trimestre")
+abline(v = 2005, col = "red", lty = 2, lwd = 1.5)
+text(2005, min(va_fin)*1.05, "Punto de empalme\n(2005Q1)", col="red", cex=0.8)
+ 
+# Transformación logarítmica (estabilizar varianza)
+lva <- log(va_fin)
+plot(lva, main = "Log VA Sector Financiero", ylab = "Log(miles mill. COP)")
+ 
+# ACF y PACF en niveles
+par(mfrow = c(1,2))
+acf(lva,  lag.max = 20, main = "ACF - Niveles log")
+pacf(lva, lag.max = 20, main = "PACF - Niveles log")
+ 
+# Pruebas de raíz unitaria
+# ADF (hipótesis nula: raíz unitaria)
+adf_niveles <- ur.df(lva, type = "trend", selectlags = "AIC")
+summary(adf_niveles)
+ 
+# KPSS (hipótesis nula: estacionaria)
+kpss_niveles <- ur.kpss(lva, type = "tau")
+summary(kpss_niveles)
+ 
+# Primera diferencia
+dlva <- diff(lva)
+plot(dlva, main = "Primera diferencia Log VA Financiero")
+ 
+par(mfrow = c(1,2))
+acf(dlva,  lag.max = 20, main = "ACF - Primera diferencia")
+pacf(dlva, lag.max = 20, main = "PACF - Primera diferencia")
+ 
+adf_diff <- ur.df(dlva, type = "drift", selectlags = "AIC")
+summary(adf_diff)
+ 
+# ── PASO 2: ESTIMACIÓN
+# Basado en la identificación, ajustar modelos candidatos
+# (los órdenes p,d,q se determinan con la ACF/PACF anterior)
+# Ejemplo con auto.arima como punto de referencia:
+modelo_auto <- auto.arima(lva, ic = "aic", stepwise = FALSE, approximation = FALSE)
+summary(modelo_auto)
+ 
+# Modelos manuales candidatos (ajustar según ACF/PACF)
+# modelo1 <- Arima(lva, order = c(p, 1, q))
+# modelo2 <- Arima(lva, order = c(p2, 1, q2))
+ 
+# ── PASO 3: VALIDACIÓN (diagnóstico de residuos)
+res <- residuals(modelo_auto)
+ 
+par(mfrow = c(2,2))
+plot(res, main = "Residuos del modelo")
+abline(h = 0, col = "red")
+acf(res,  lag.max = 20, main = "ACF Residuos")
+pacf(res, lag.max = 20, main = "PACF Residuos")
+qqnorm(res); qqline(res, col = "red")
+ 
+# Test de Ljung-Box (no autocorrelación en residuos)
+Box.test(res, lag = 12, type = "Ljung-Box")
+Box.test(res, lag = 20, type = "Ljung-Box")
+ 
+# Test de normalidad
+jarque.bera.test(res)
+ 
+# ── PASO 4: PRONÓSTICO (10 trimestres adelante)
+pronostico <- forecast(modelo_auto, h = 10, level = c(80, 95))
+plot(pronostico,
+     main = "Pronóstico VA Sector Financiero (10 trimestres)",
+     ylab = "Log(miles mill. COP base 2015 equiv.)")
+abline(v = 2005, col = "red", lty = 2)
+ 
+# Pronóstico en niveles originales (deshacer log)
+pronostico_niveles <- exp(pronostico$mean)
+IC_lower_95 <- exp(pronostico$lower[,"95%"])
+IC_upper_95 <- exp(pronostico$upper[,"95%"])
+ 
+print(data.frame(
+  trimestre = time(pronostico$mean),
+  pronostico = round(pronostico_niveles, 2),
+  IC_lower_95 = round(IC_lower_95, 2),
+  IC_upper_95 = round(IC_upper_95, 2)
+))
+ 
+# ── DUMMY DE QUIEBRE (para declarar en el análisis)
+# Si el test de Chow sugiere quiebre en 2005Q1:
+n_total <- length(lva)
+n_pre   <- 20  # obs retroproyectadas
+dummy_empalme <- c(rep(0, n_pre), rep(1, n_total - n_pre))
+# Incluir en modelo con xreg si es necesario
