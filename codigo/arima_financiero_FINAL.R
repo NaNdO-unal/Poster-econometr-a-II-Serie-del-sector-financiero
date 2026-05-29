@@ -381,9 +381,9 @@ for (nombre in nombres_modelos) {
   print(gg_qq)
 
   # Ljung-Box: H0 = no autocorrelacion en residuos
-  lb_5  <- Box.test(res, lag = 5,  type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
-  lb_10 <- Box.test(res, lag = 10, type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
-  lb_20 <- Box.test(res, lag = 20, type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
+  lb_4 <- Box.test(res, lag = 4,  type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
+  lb_8 <- Box.test(res, lag = 8, type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
+  lb_12 <- Box.test(res, lag = 12, type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
 
   # ARCH: H0 = no efectos ARCH (homocedasticidad condicional)
   arch_1 <- FinTS::ArchTest(res, lags = 1)$p.value
@@ -395,9 +395,9 @@ for (nombre in nombres_modelos) {
 
   tabla_validacion[[nombre]] <- data.frame(
     Modelo    = nombre,
-    `LB(5)`   = lb_5,
-    `LB(10)`  = lb_10,
-    `LB(20)`  = lb_20,
+    `LB(4)`   = lb_4,
+    `LB(8)`  = lb_8,
+    `LB(12)`  = lb_12,
     `ARCH(1)` = arch_1,
     `ARCH(2)` = arch_2,
     `ARCH(5)` = arch_5,
@@ -503,7 +503,7 @@ print(
     ) +
     geom_ribbon(
       data = pron_normal,
-      aes(x = Trimestre, ymin = IC_inf_95, ymax = IC_sup_95),
+      aes(x = Trimestre, ymin = `95%_lower`, ymax = `95%_upper`),
       fill = "#2A9D8F", alpha = 0.25
     ) +
     geom_line(
