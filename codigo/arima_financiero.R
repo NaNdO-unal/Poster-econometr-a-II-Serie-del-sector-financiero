@@ -51,7 +51,7 @@ ARIMA <- fable::ARIMA
 # here::i_am() busca hacia arriba en el árbol de directorios hasta
 # encontrar la ruta que coincida. Esto hace que el código sea
 # reproducible en cualquier computador sin cambiar rutas manualmente.
-here::i_am("arima_financiero.R")
+here::i_am("codigo/arima_financiero.R")
 
 # Ruta al directorio de datos (relativa a la raíz del proyecto)
 DATA_DIR <- fs::path(here::here("datos"))
