@@ -172,7 +172,7 @@ print(
     xlab("Trimestre") + ylab("Miles de millones COP") +
     theme_light()
 )
-# --- 1.2 Gráfica corregida ---
+# --- 1.1.1 Gráfica corregida ---
 
 # 1. Filtramos la tabla para que empiece desde 2000 Q1
 va_fin_filtrada <- va_fin_tbl %>% 
@@ -212,7 +212,26 @@ print(
     xlab("Trimestre") + ylab("Log(miles de millones COP)") +
     theme_light()
 )
+# --- 1.2.1 Transformación logaritmica con grafica corregida ---
 
+# 1. Creamos el logaritmo y filtramos para que comience en 2000 Q1
+va_fin_log_filtrada <- va_fin_tbl %>% 
+  mutate(log_va = log(va_financiero_b2015_equiv)) %>% 
+  filter(fecha >= yearquarter("2000 Q1")) # <- Cambia 'Trimestre' si se llama distinto
+
+# 2. Graficamos la serie logarítmica corregida
+print(
+  ggtime::autoplot(va_fin_log_filtrada, log_va, linewidth = 0.7) +
+    
+    # Eliminamos as.numeric() para que la línea se posicione correctamente en 2005
+    geom_vline(xintercept = yearquarter("2005 Q1"), 
+               color = "red", linetype = "dashed", linewidth = 0.8) +
+    
+    ggtitle("Log VA Sector Financiero y Seguros") +
+    xlab("Trimestre") + 
+    ylab("Log(miles de millones COP)") + 
+    theme_light()
+)
 # --- 1.3 FAC y FACP de la serie en niveles (log) ---
 
 g_fac_niveles <- va_fin_tbl |>
@@ -270,6 +289,28 @@ print(
                color = "red", linetype = "dashed", linewidth = 0.8) +
     ggtitle("Primera diferencia de Log VA Financiero\n(aprox. tasa de crecimiento trimestral)") +
     xlab("Trimestre") + ylab("Δlog(VA)") +
+    theme_light()
+)
+
+### --- 1.5.1 Correción grafica primera diferencia del log ---
+
+# 1. Aseguramos la estructura, creamos la diferencia y filtramos desde 2000 Q1
+va_fin_diff_filtrada <- va_fin_tbl %>% 
+  fill_gaps() %>% # Evita el error de gaps implícitos
+  mutate(diff_log_va = difference(log_va)) %>% 
+  filter(fecha >= yearquarter("2000 Q1"), !is.na(diff_log_va)) # Cambia 'Trimestre' si se llama distinto
+
+# 2. Graficamos la serie estacionaria (tasa de crecimiento)
+print(
+  ggtime::autoplot(va_fin_diff_filtrada, diff_log_va, linewidth = 0.7) +
+    
+    # Quitamos as.numeric() para ubicar la línea en el año 2005 exacto
+    geom_vline(xintercept = yearquarter("2005 Q1"), 
+               color = "red", linetype = "dashed", linewidth = 0.8) +
+    
+    ggtitle("Primera diferencia de Log VA Financiero\n(aprox. tasa de crecimiento trimestral)") +
+    xlab("Trimestre") + 
+    ylab("Δlog(VA)") + 
     theme_light()
 )
 
