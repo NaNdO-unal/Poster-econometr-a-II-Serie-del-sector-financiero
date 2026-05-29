@@ -381,13 +381,14 @@ cat("\n\n===== PASO 2: ESTIMACIÓN =====\n")
 # PDQ(0,0,0) es OBLIGATORIO para evitar que fable estime SARIMA automáticamente.
 # Los datos están desestacionalizados, por tanto D=0 es correcto.
 
-nombres_modelos <- c("ARIMA(1,1,0)", "ARIMA(0,1,1)", "ARIMA(1,1,1)")
+nombres_modelos <- c("ARIMA(1,1,0)", "ARIMA(0,1,1)", "ARIMA(1,1,1)","ARIMA(0,1,0)")
 
 fit_va <- va_fin_tbl |>
   model(
     "ARIMA(1,1,0)" = fable::ARIMA(log(va_financiero_b2015_equiv) ~ 0 + pdq(1, 1, 0) + PDQ(0, 0, 0)),
     "ARIMA(0,1,1)" = fable::ARIMA(log(va_financiero_b2015_equiv) ~ 0 + pdq(0, 1, 1) + PDQ(0, 0, 0)),
-    "ARIMA(1,1,1)" = fable::ARIMA(log(va_financiero_b2015_equiv) ~ 0 + pdq(1, 1, 1) + PDQ(0, 0, 0))
+    "ARIMA(1,1,1)" = fable::ARIMA(log(va_financiero_b2015_equiv) ~ 0 + pdq(1, 1, 1) + PDQ(0, 0, 0)),
+    "ARIMA(0,1,0)" = fable::ARIMA(log(va_financiero_b2015_equiv) ~ 1 + pdq(0,1,0) + PDQ(0,0,0))
   )
 
 # Resumen individual de cada modelo
@@ -456,9 +457,9 @@ for (nombre in nombres_modelos) {
   print(gg_qq)
 
   # ── Prueba Ljung-Box (H0: no autocorrelación en residuos)
-  lb_5  <- Box.test(res, lag = 5,  type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
-  lb_10 <- Box.test(res, lag = 10, type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
-  lb_20 <- Box.test(res, lag = 20, type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
+  lb_4  <- Box.test(res, lag = 4,  type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
+  lb_8 <- Box.test(res, lag = 8, type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
+  lb_12 <- Box.test(res, lag = 12, type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
 
   # ── Prueba ARCH (H0: no efectos ARCH en residuos)
   arch_1 <- FinTS::ArchTest(res, lags = 1)$p.value
@@ -470,9 +471,9 @@ for (nombre in nombres_modelos) {
 
   tabla_validacion[[nombre]] <- data.frame(
     Modelo   = nombre,
-    `LB(5)`  = lb_5,
-    `LB(10)` = lb_10,
-    `LB(20)` = lb_20,
+    `LB(4)`  = lb_5,
+    `LB(8)` = lb_10,
+    `LB(12)` = lb_20,
     `ARCH(1)` = arch_1,
     `ARCH(2)` = arch_2,
     `ARCH(5)` = arch_5,
@@ -528,8 +529,9 @@ for (nombre in nombres_modelos) {
 colores_modelos <- c(
   "ARIMA(1,1,0)" = "#E63946",
   "ARIMA(0,1,1)" = "#2A9D8F",
-  "ARIMA(1,1,1)" = "#E9C46A"
-)
+  "ARIMA(1,1,1)" = "#E9C46A",
+  "ARIMA(0,1,0)" = "green"
+  )
 
 print(
   ggplot() +
@@ -552,9 +554,40 @@ print(
     theme_minimal()
 )
 
+#Grafica conjunta corregida.
+# 1. Filtramos la tabla histórica para que empiece en 2000 Q1
+# Usamos 'fecha' que es el nombre que configuraste en tu aes()
+va_fin_recortada <- va_fin_tbl %>% 
+  filter(fecha >= yearquarter("2000 Q1"))
+
+# 2. Armamos la gráfica usando los datos recortados
+print(
+  ggplot() +
+    # Datos históricos ya recortados
+    geom_line(
+      data = va_fin_recortada,
+      aes(x = fecha, y = va_financiero_b2015_equiv),
+      color = "black", linewidth = 0.5
+    ) +
+    # Datos de pronósticos futuros (se quedan igual)
+    geom_line(
+      data = pronosticos,
+      aes(x = fecha, y = .mean, color = .model),
+      linewidth = 1
+    ) +
+    # Quitamos as.numeric() para que la línea se mueva al 2005 exacto
+    geom_vline(
+      xintercept = yearquarter("2005 Q1"),
+      color = "red", linetype = "dashed", linewidth = 0.7
+    ) +
+    scale_color_manual(values = colores_modelos) +
+    ggtitle("Pronóstico VA Sector Financiero y Seguros - Colombia\n10 trimestres adelante") +
+    xlab("Trimestre") + 
+    ylab("Miles de millones COP (base 2015 equiv.)") +
+    labs(color = "Modelo") +
+    theme_minimal()
+)
 cat("\nFin del script. Revise las gráficas y ajuste los órdenes en el Paso 2\n")
 cat("según la lectura real de la FAC y FACP del Paso 1.\n")
 
-### ---Subir la información a Git---
-git config --global user.name "NaNdO-unal"
-git config --global user.email "arrodriguezsa@unal.edu.co"
+
