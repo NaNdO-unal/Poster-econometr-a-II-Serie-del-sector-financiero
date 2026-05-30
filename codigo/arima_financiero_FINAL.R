@@ -48,7 +48,7 @@ ARIMA <- fable::ARIMA
 #   └── datos/
 #       └── serie_empalmada_100obs.xlsx
 
-here::i_am("codigo/arima_financiero.R")
+here::i_am("codigo/arima_financiero_FINAL.R")
 
 DATA_DIR   <- fs::path(here::here("datos"))
 ruta_datos <- fs::path(DATA_DIR, "serie_empalmada_100obs.xlsx")
@@ -381,9 +381,9 @@ for (nombre in nombres_modelos) {
   print(gg_qq)
 
   # Ljung-Box: H0 = no autocorrelacion en residuos
-  lb_5  <- Box.test(res, lag = 5,  type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
-  lb_10 <- Box.test(res, lag = 10, type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
-  lb_20 <- Box.test(res, lag = 20, type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
+  lb_4  <- Box.test(res, lag = 4,  type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
+  lb_8 <- Box.test(res, lag = 8, type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
+  lb_12 <- Box.test(res, lag = 12, type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
 
   # ARCH: H0 = no efectos ARCH (homocedasticidad condicional)
   arch_1 <- FinTS::ArchTest(res, lags = 1)$p.value
@@ -395,9 +395,9 @@ for (nombre in nombres_modelos) {
 
   tabla_validacion[[nombre]] <- data.frame(
     Modelo    = nombre,
-    `LB(5)`   = lb_5,
-    `LB(10)`  = lb_10,
-    `LB(20)`  = lb_20,
+    `LB(4)`   = lb_4,
+    `LB(8)`  = lb_8,
+    `LB(12)`  = lb_12,
     `ARCH(1)` = arch_1,
     `ARCH(2)` = arch_2,
     `ARCH(5)` = arch_5,
@@ -419,6 +419,147 @@ cat("    (std 2000-2004 = 0.90%% vs 2005-2024 = 3.11%%).\n")
 cat("  - JB y Ljung-Box: choque extraordinario COVID-19 (2020Q2-2021Q1).\n")
 cat("  El orden ARIMA(0,1,0) sigue siendo el mejor disponible en el marco Box-Jenkins.\n")
 
+# ============================================================
+# EXTRACCIÓN DE ESTADÍSTICOS Y P-VALORES PARA PRESENTACIÓN
+# ============================================================
+
+tabla_presentacion <- list()
+
+for (nombre in nombres_modelos) {
+  ordenes <- as.integer(regmatches(nombre, gregexpr("[0-9]", nombre))[[1]])
+  p_ord <- ordenes[1]; q_ord <- ordenes[3]
+  
+  residuos_tbl <- fit_va |>
+    select(all_of(nombre)) |>
+    augment() |>
+    as_tibble() |>
+    filter(!is.na(.resid)) |>
+    select(fecha, .resid)
+  
+  res <- residuos_tbl$.resid
+  fitdf_val <- p_ord + q_ord
+  
+  # ── Ljung-Box: extrae estadístico y p-valor
+  lb4  <- Box.test(res, lag = 4  + fitdf_val, type = "Ljung-Box", fitdf = fitdf_val)
+  lb8  <- Box.test(res, lag = 8  + fitdf_val, type = "Ljung-Box", fitdf = fitdf_val)
+  lb12 <- Box.test(res, lag = 12 + fitdf_val, type = "Ljung-Box", fitdf = fitdf_val)
+  
+  # ── ARCH: extrae estadístico y p-valor
+  arch1 <- FinTS::ArchTest(res, lags = 1)
+  arch2 <- FinTS::ArchTest(res, lags = 2)
+  arch5 <- FinTS::ArchTest(res, lags = 5)
+  
+  # ── Jarque-Bera
+  jb <- jarque.bera.test(res)
+  
+  tabla_presentacion[[nombre]] <- data.frame(
+    Modelo = nombre,
+    # Ljung-Box
+    LB_stat_4  = round(lb4$statistic,  4),
+    LB_pval_4  = round(lb4$p.value,    4),
+    LB_stat_8  = round(lb8$statistic,  4),
+    LB_pval_8  = round(lb8$p.value,    4),
+    LB_stat_12 = round(lb12$statistic, 4),
+    LB_pval_12 = round(lb12$p.value,   4),
+    # ARCH
+    ARCH_stat_1 = round(arch1$statistic, 4),
+    ARCH_pval_1 = round(arch1$p.value,   4),
+    ARCH_stat_2 = round(arch2$statistic, 4),
+    ARCH_pval_2 = round(arch2$p.value,   4),
+    ARCH_stat_5 = round(arch5$statistic, 4),
+    ARCH_pval_5 = round(arch5$p.value,   4),
+    # Jarque-Bera
+    JB_stat = round(jb$statistic, 4),
+    JB_pval = round(jb$p.value,   4),
+    check.names = FALSE,
+    row.names   = NULL
+  )
+}
+
+# ============================================================
+# EXTRACCIÓN DE ESTADÍSTICOS Y P-VALORES PARA PRESENTACIÓN
+# ============================================================
+
+tabla_presentacion <- list()
+
+for (nombre in nombres_modelos) {
+  ordenes <- as.integer(regmatches(nombre, gregexpr("[0-9]", nombre))[[1]])
+  p_ord <- ordenes[1]; q_ord <- ordenes[3]
+  
+  residuos_tbl <- fit_va |>
+    select(all_of(nombre)) |>
+    augment() |>
+    as_tibble() |>
+    filter(!is.na(.resid)) |>
+    select(fecha, .resid)
+  
+  res <- residuos_tbl$.resid
+  fitdf_val <- p_ord + q_ord
+  
+  # ── Ljung-Box: extrae estadístico y p-valor
+  lb4  <- Box.test(res, lag = 4  + fitdf_val, type = "Ljung-Box", fitdf = fitdf_val)
+  lb8  <- Box.test(res, lag = 8  + fitdf_val, type = "Ljung-Box", fitdf = fitdf_val)
+  lb12 <- Box.test(res, lag = 12 + fitdf_val, type = "Ljung-Box", fitdf = fitdf_val)
+  
+  # ── ARCH: extrae estadístico y p-valor
+  arch1 <- FinTS::ArchTest(res, lags = 1)
+  arch2 <- FinTS::ArchTest(res, lags = 2)
+  arch5 <- FinTS::ArchTest(res, lags = 5)
+  
+  # ── Jarque-Bera
+  jb <- jarque.bera.test(res)
+  
+  tabla_presentacion[[nombre]] <- data.frame(
+    Modelo = nombre,
+    # Ljung-Box
+    LB_stat_4  = round(lb4$statistic,  4),
+    LB_pval_4  = round(lb4$p.value,    4),
+    LB_stat_8  = round(lb8$statistic,  4),
+    LB_pval_8  = round(lb8$p.value,    4),
+    LB_stat_12 = round(lb12$statistic, 4),
+    LB_pval_12 = round(lb12$p.value,   4),
+    # ARCH
+    ARCH_stat_1 = round(arch1$statistic, 4),
+    ARCH_pval_1 = round(arch1$p.value,   4),
+    ARCH_stat_2 = round(arch2$statistic, 4),
+    ARCH_pval_2 = round(arch2$p.value,   4),
+    ARCH_stat_5 = round(arch5$statistic, 4),
+    ARCH_pval_5 = round(arch5$p.value,   4),
+    # Jarque-Bera
+    JB_stat = round(jb$statistic, 4),
+    JB_pval = round(jb$p.value,   4),
+    check.names = FALSE,
+    row.names   = NULL
+  )
+}
+
+resultado_final <- bind_rows(tabla_presentacion)
+
+print(resultado_final)
+# Imprimir en formato legible para el póster
+cat("\n========================================================\n")
+cat("TABLA DE VALIDACIÓN - ESTADÍSTICOS Y P-VALORES\n")
+cat("========================================================\n\n")
+
+for (nombre in nombres_modelos) {
+  fila <- resultado_final |> filter(Modelo == nombre)
+  cat(sprintf("Modelo: %s\n", nombre))
+  cat(sprintf("  Ljung-Box (lag 4):  Q = %7.4f  |  p = %.4f\n",
+              fila$LB_stat_4,  fila$LB_pval_4))
+  cat(sprintf("  Ljung-Box (lag 8):  Q = %7.4f  |  p = %.4f\n",
+              fila$LB_stat_8,  fila$LB_pval_8))
+  cat(sprintf("  Ljung-Box (lag 12): Q = %7.4f  |  p = %.4f\n",
+              fila$LB_stat_12, fila$LB_pval_12))
+  cat(sprintf("  ARCH (lag 1):       X2= %7.4f  |  p = %.4f\n",
+              fila$ARCH_stat_1, fila$ARCH_pval_1))
+  cat(sprintf("  ARCH (lag 2):       X2= %7.4f  |  p = %.4f\n",
+              fila$ARCH_stat_2, fila$ARCH_pval_2))
+  cat(sprintf("  ARCH (lag 5):       X2= %7.4f  |  p = %.4f\n",
+              fila$ARCH_stat_5, fila$ARCH_pval_5))
+  cat(sprintf("  Jarque-Bera:        X2= %7.4f  |  p = %.4f\n",
+              fila$JB_stat, fila$JB_pval))
+  cat("\n")
+}
 # ============================================================
 # TEST CUSUM - ESTABILIDAD ESTRUCTURAL
 # ============================================================
@@ -481,8 +622,8 @@ tabla_normal <- pron_normal |>
   select(
     Trimestre   = fecha,
     Pronostico  = .mean,
-    IC_inf_95   = `95%_lower`,
-    IC_sup_95   = `95%_upper`
+    IC_inf_95   = "95%_lower",
+    IC_sup_95   = "95%_upper"
   )
 
 imprimir_tabla_pronostico(
@@ -503,7 +644,7 @@ print(
     ) +
     geom_ribbon(
       data = pron_normal,
-      aes(x = Trimestre, ymin = IC_inf_95, ymax = IC_sup_95),
+      aes(x = fecha, ymin = `95%_lower`, ymax = `95%_upper`),
       fill = "#2A9D8F", alpha = 0.25
     ) +
     geom_line(
@@ -521,7 +662,35 @@ print(
     ylab("Miles de millones COP (base 2015 equiv.)") +
     theme_minimal()
 )
+### Ecuación estimada del modelo ARIMA (0,1,0) ###
 
+# Extraer coeficientes del modelo seleccionado
+coef_tabla <- fit_va |>
+  select("ARIMA(0,1,0)") |>
+  tidy()
+
+print(coef_tabla)
+# Columnas: term | estimate | std.error | statistic | p.value
+# Extraer valores individuales
+drift  <- coef_tabla |> filter(term == "constant") |> pull(estimate) |> round(4)
+sigma2 <- fit_va |>
+  select("ARIMA(0,1,0)") |>
+  glance() |>
+  pull(sigma2) |>
+  round(6)
+
+# Imprimir ecuación
+cat("\n=== ECUACIÓN ESTIMADA: ARIMA(0,1,0) con deriva ===\n\n")
+cat(sprintf("  Delta(log Y_t) = %.4f + e_t\n", drift))
+cat(sprintf("  e_t ~ RB(0, %.6f)\n\n", sigma2))
+cat("  Equivalentemente en niveles:\n")
+cat(sprintf("  log(Y_t) = %.4f + log(Y_{t-1}) + e_t\n", drift))
+cat("\n  Donde:\n")
+cat("    Y_t      = VA sector financiero y seguros (miles mill. COP base 2015)\n")
+cat("    Delta    = operador de primera diferencia\n")
+cat(sprintf("    %.4f  = tasa de crecimiento trimestral promedio (drift)\n", drift))
+cat("    e_t      = termino de error (ruido blanco)\n")
+cat(sprintf("    sigma^2  = %.6f (varianza estimada del error)\n", sigma2))
 # ============================================================
 # BOOTSTRAP - INTERVALOS DE CONFIANZA ROBUSTOS
 # ============================================================
@@ -603,4 +772,226 @@ print(
     theme_minimal()
 )
 
-cat("\nScript completado exitosamente.\n")
+# ============================================================
+# EXTENSIÓN: ARIMA(0,1,0) CON DUMMY COVID
+# ============================================================
+# Motivación: el choque COVID (2020Q2) produjo la caída más pronunciada
+# de la serie y la recuperación de 2021Q1 generó el mayor residuo positivo.
+# Residuos consecutivos de signos opuestos en períodos adyacentes generan
+# autocorrelación artificial en el lag 2 del Ljung-Box.
+# Una variable dummy de impulso absorbe ese efecto puntual sin alterar
+# la especificación ARIMA, consistente con el resultado CUSUM que descartó
+# un quiebre estructural permanente.
+#
+# Se omite la dummy de empalme porque el CUSUM (p = 0.93) mostró que
+# ese evento no afectó la estabilidad de los parámetros del modelo.
+# ============================================================
+
+# --- Variables dummy ---
+
+va_fin_tbl <- va_fin_tbl |>
+  mutate(
+    # Impulso en la caída: 2020Q2 concentra el mayor residuo negativo
+    d_caida    = if_else(fecha == yearquarter("2020 Q2"), 1, 0),
+    # Impulso en la recuperación: 2021Q1 concentra el mayor residuo positivo
+    d_rebote   = if_else(fecha == yearquarter("2021 Q1"), 1, 0)
+  )
+
+# --- Estimación comparativa ---
+# Se estiman tres versiones del ARIMA(0,1,0) para aislar el efecto de cada dummy.
+# Todos con constante (~ 1) porque el drift es significativo.
+
+nombres_covid <- c(
+  "ARIMA(0,1,0)",
+  "ARIMA(0,1,0)+caida",
+  "ARIMA(0,1,0)+caida+rebote"
+)
+
+fit_covid <- va_fin_tbl |>
+  model(
+    "ARIMA(0,1,0)"             = fable::ARIMA(
+      log(va_financiero_b2015_equiv) ~ 1 +
+        pdq(0, 1, 0) + PDQ(0, 0, 0)
+    ),
+    "ARIMA(0,1,0)+caida"       = fable::ARIMA(
+      log(va_financiero_b2015_equiv) ~ 1 + d_caida +
+        pdq(0, 1, 0) + PDQ(0, 0, 0)
+    ),
+    "ARIMA(0,1,0)+caida+rebote" = fable::ARIMA(
+      log(va_financiero_b2015_equiv) ~ 1 + d_caida + d_rebote +
+        pdq(0, 1, 0) + PDQ(0, 0, 0)
+    )
+  )
+
+# Resumen de cada modelo
+cat("\n--- Estimacion modelos con dummy COVID ---\n")
+for (nombre in nombres_covid) {
+  cat("\n", nombre, "\n", sep = "")
+  print(report(fit_covid |> select(all_of(nombre))))
+}
+
+# Criterios de información comparativos
+cat("\n--- Criterios de informacion ---\n")
+print(
+  glance(fit_covid) |>
+    select(.model, AIC, BIC) |>
+    arrange(AIC)
+)
+cat("La dummy mejora el modelo si reduce AIC y BIC respecto al modelo base.\n")
+
+# --- Validación comparativa ---
+
+tabla_val_covid <- list()
+
+for (nombre in nombres_covid) {
+  # ARIMA(0,1,0) tiene p=0, q=0 en todos los casos: fitdf = 0
+  residuos_tbl <- fit_covid |>
+    select(all_of(nombre)) |>
+    augment() |>
+    as_tibble() |>
+    filter(!is.na(.resid)) |>
+    select(fecha, .resid)
+  
+  res      <- residuos_tbl$.resid
+  res2_tbl <- residuos_tbl |> mutate(res2 = .resid^2)
+  
+  # Gráficas de diagnóstico
+  g_res <- ggplot(residuos_tbl, aes(x = fecha, y = .resid)) +
+    geom_line(linewidth = 0.4) +
+    geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+    ggtitle(paste("Residuos -", nombre)) +
+    xlab("Trimestre") + ylab("Residuo") + theme_light()
+  
+  g_fac_res <- residuos_tbl |>
+    as_tsibble(index = fecha) |>
+    ACF(.resid, lag_max = 20) |>
+    ggtime::autoplot() +
+    ggtitle(paste("FAC residuos -", nombre)) +
+    ylim(-1, 1) + theme_light()
+  
+  g_fac_res2 <- res2_tbl |>
+    as_tsibble(index = fecha) |>
+    ACF(res2, lag_max = 20) |>
+    ggtime::autoplot() +
+    ggtitle(paste("FAC res2 -", nombre)) +
+    ylim(-1, 1) + theme_light()
+  
+  grilla(g_res, g_fac_res, g_fac_res2, nrow = 1, ncol = 3)
+  
+  # Pruebas formales
+  # fitdf = 0: ARIMA(0,1,0) no consume grados de libertad en AR/MA
+  lb_4  <- Box.test(res, lag = 4,  type = "Ljung-Box", fitdf = 0)$p.value
+  lb_8 <- Box.test(res, lag = 8, type = "Ljung-Box", fitdf = 0)$p.value
+  lb_12 <- Box.test(res, lag = 12, type = "Ljung-Box", fitdf = 0)$p.value
+  arch_1 <- FinTS::ArchTest(res, lags = 1)$p.value
+  arch_2 <- FinTS::ArchTest(res, lags = 2)$p.value
+  arch_5 <- FinTS::ArchTest(res, lags = 5)$p.value
+  jb     <- jarque.bera.test(res)$p.value
+  
+  tabla_val_covid[[nombre]] <- data.frame(
+    Modelo    = nombre,
+    `LB(4)`   = lb_4,
+    `LB(8)`  = lb_8,
+    `LB(12)`  = lb_12,
+    `ARCH(1)` = arch_1,
+    `ARCH(2)` = arch_2,
+    `ARCH(5)` = arch_5,
+    `JB`      = jb,
+    check.names = FALSE
+  )
+}
+
+cat("\n--- Tabla de validacion comparativa (p-valores) ---\n")
+print(
+  bind_rows(tabla_val_covid) |>
+    mutate(across(where(is.numeric), ~ round(.x, 4)))
+)
+cat("\nClave de lectura:\n")
+cat("  LB y ARCH: p > 0.05 es deseable (no rechazo H0).\n")
+cat("  JB:        p > 0.05 es deseable (residuos normales).\n")
+cat("  Si la dummy corrige LB sin empeorar ARCH/JB: se justifica incluirla.\n")
+
+# --- Pronóstico del modelo con dummy ---
+# Para pronosticar con dummy se requiere especificar el valor futuro
+# de la dummy en los 10 períodos del horizonte (todos cero: no hay COVID futuro).
+
+nuevos_datos <- new_data(va_fin_tbl, n = 10) |>
+  mutate(
+    d_caida  = 0,
+    d_rebote = 0
+  )
+
+pron_covid <- fit_covid |>
+  select("ARIMA(0,1,0)+caida+rebote") |>
+  forecast(new_data = nuevos_datos) |>
+  hilo(level = 95) |>
+  fabletools::unpack_hilo("95%")
+
+tabla_pron_covid <- pron_covid |>
+  as_tibble() |>
+  select(
+    Trimestre  = fecha,
+    Pronostico = .mean,
+    IC_inf_95  = `95%_lower`,
+    IC_sup_95  = `95%_upper`
+  )
+
+imprimir_tabla_pronostico(
+  "Pronostico 10 trimestres - ARIMA(0,1,0) + dummy COVID (IC 95%)",
+  tabla_pron_covid
+)
+
+# Gráfica del pronóstico con dummy
+print(
+  ggplot() +
+    geom_line(
+      data = va_fin_tbl,
+      aes(x = fecha, y = va_financiero_b2015_equiv),
+      color = "black", linewidth = 0.5
+    ) +
+    geom_ribbon(
+      data = tabla_pron_covid,
+      aes(x = Trimestre, ymin = IC_inf_95, ymax = IC_sup_95),
+      fill = "#457B9D", alpha = 0.25
+    ) +
+    geom_line(
+      data = tabla_pron_covid,
+      aes(x = Trimestre, y = Pronostico),
+      color = "#457B9D", linewidth = 1.2
+    ) +
+    geom_vline(xintercept = yearquarter("2005 Q1"),
+               color = "red", linetype = "dashed", linewidth = 0.7) +
+    geom_vline(xintercept = yearquarter("2020 Q2"),
+               color = "orange", linetype = "dotted", linewidth = 0.7) +
+    annotate("text", x = yearquarter("2020 Q3"),
+             y = max(va_fin_tbl$va_financiero_b2015_equiv) * 0.88,
+             label = "COVID\n2020Q2", color = "orange", size = 2.8, hjust = 0) +
+    ggtitle("ARIMA(0,1,0) + dummy COVID - Pronostico 10 trimestres") +
+    xlab("Trimestre") +
+    ylab("Miles de millones COP (base 2015 equiv.)") +
+    theme_minimal()
+)
+
+# Bootstrap con dummy
+cat("\nEjecutando bootstrap con dummy COVID (2000 replicas)...\n")
+
+pron_boot_covid <- fit_covid |>
+  select("ARIMA(0,1,0)+caida+rebote") |>
+  forecast(new_data = nuevos_datos, bootstrap = TRUE, times = 2000) |>
+  hilo(level = 95) |>
+  fabletools::unpack_hilo("95%")
+
+tabla_boot_covid <- pron_boot_covid |>
+  as_tibble() |>
+  select(
+    Trimestre  = fecha,
+    Pronostico = .mean,
+    IC_inf_95  = `95%_lower`,
+    IC_sup_95  = `95%_upper`
+  )
+
+imprimir_tabla_pronostico(
+  "Pronostico Bootstrap 10 trimestres - ARIMA(0,1,0) + dummy COVID",
+  tabla_boot_covid
+)
+
