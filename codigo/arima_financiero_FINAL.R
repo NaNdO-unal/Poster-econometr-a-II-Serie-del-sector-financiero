@@ -381,7 +381,11 @@ for (nombre in nombres_modelos) {
   print(gg_qq)
 
   # Ljung-Box: H0 = no autocorrelacion en residuos
+<<<<<<< HEAD
   lb_4  <- Box.test(res, lag = 4,  type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
+=======
+  lb_4 <- Box.test(res, lag = 4,  type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
+>>>>>>> 5aa39a536799bb90b49db5a495f45f279f9e4809
   lb_8 <- Box.test(res, lag = 8, type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
   lb_12 <- Box.test(res, lag = 12, type = "Ljung-Box", fitdf = p_ord + q_ord)$p.value
 
@@ -644,7 +648,11 @@ print(
     ) +
     geom_ribbon(
       data = pron_normal,
+<<<<<<< HEAD
       aes(x = fecha, ymin = `95%_lower`, ymax = `95%_upper`),
+=======
+      aes(x = Trimestre, ymin = `95%_lower`, ymax = `95%_upper`),
+>>>>>>> 5aa39a536799bb90b49db5a495f45f279f9e4809
       fill = "#2A9D8F", alpha = 0.25
     ) +
     geom_line(
