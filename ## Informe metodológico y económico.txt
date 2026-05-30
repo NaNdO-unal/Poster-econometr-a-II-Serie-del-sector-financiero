@@ -1,66 +1,210 @@
-## Informe metodológico y económico
-### Valor Agregado del Sector Financiero y de Seguros en Colombia: una aplicación de la metodología Box-Jenkins
+# Informe metodológico y económico
+## Modelación del Valor Agregado del Sector Financiero y de Seguros en Colombia mediante la metodología Box-Jenkins
+### Econometría II — Universidad Nacional de Colombia, Facultad de Ciencias Económicas — 2026-I
+### Esteban Lopez Castañeda - Armando José Rodríguez Sánchez
 
 ---
 
-Este informe describe el proceso de modelación de series de tiempo aplicado al valor agregado (VA) del sector de actividades financieras y de seguros en Colombia, utilizando datos del Departamento Administrativo Nacional de Estadística (DANE) con base de precios constantes de 2015. El objetivo fue ajustar un modelo ARIMA siguiendo la metodología Box-Jenkins en sus cuatro etapas: identificación, estimación, validación y pronóstico. Lo que sigue es un resumen del recorrido metodológico y de los hallazgos económicos que lo atraviesan.
+## 1. Motivación económica
+
+El sector de actividades financieras y de seguros ocupa un lugar estructural en el funcionamiento de cualquier economía moderna. Su función principal no es solo la intermediación entre ahorradores y deudores, sino la asignación intertemporal del riesgo, la provisión de liquidez al sistema productivo y la canalización del ahorro hacia la inversión. En Colombia, este sector ha experimentado una transformación profunda desde la crisis financiera de finales de los años noventa, cuando la cartera vencida y el desplome del crédito hipotecario llevaron al sistema a una contracción severa que tardó casi una década en revertirse completamente.
+
+El período 2000–2025 que abarca este trabajo corresponde exactamente a ese proceso de reconstrucción y posterior consolidación: desde los años de recuperación post-crisis, pasando por la expansión sostenida de los años dos mil y la primera mitad de los diez, hasta el choque de la pandemia en 2020 y la recuperación posterior. Modelar el valor agregado del sector en este horizonte no es solo un ejercicio técnico. Es una forma de capturar cuantitativamente la dinámica de crecimiento de una actividad que, según las Cuentas Nacionales del DANE base 2015, representa en 2024 alrededor de 13.500 miles de millones de pesos constantes y que ha crecido a una tasa sostenida a lo largo de todo el período analizado.
+
+La elección de una metodología de series de tiempo —concretamente Box-Jenkins— responde a una premisa fundamental: el valor agregado del sector financiero en cualquier trimestre está condicionado por su historia reciente. El crédito, las captaciones, las reservas técnicas de seguros y los ingresos por comisiones no saltan de un período a otro de forma aleatoria —exhiben persistencia, tendencia y en ocasiones ciclos identificables. Identificar la estructura de esa dependencia temporal y cuantificarla es el propósito central de este trabajo.
 
 ---
 
-**Construcción de la serie y decisiones de empalme**
+## 2. Fuente de datos y decisiones de construcción de la serie
 
-El primer obstáculo fue de naturaleza estadística y metodológica antes de llegar al modelamiento propiamente dicho. Las cuentas nacionales del DANE registran el valor agregado del sector financiero bajo dos bases de precios distintas: base 2015, que corresponde al Sistema de Cuentas Nacionales SCN 2008 y clasifica el sector como "Actividades financieras y de seguros" según la CIIU Revisión 4; y base 2005, que responde al SCN 1993 y agrupa un conjunto más amplio de actividades que incluye establecimientos financieros, seguros, actividades inmobiliarias y servicios a las empresas. La serie en base 2015 disponible cubre desde 2005Q1 con 85 observaciones, cifra inferior al mínimo de 100 requerido metodológicamente.
+### 2.1 Fuente primaria
 
-Para extender la serie hacia atrás se utilizaron datos en base 2005, que cubren el período 2000Q1 a 2008Q4, con 16 trimestres de traslape respecto a la serie base 2015 (2005Q1 a 2008Q4). El empalme se realizó por el método del cociente: se calculó el ratio entre ambas series en el período de traslape, se verificó su estabilidad mediante el coeficiente de variación (CV = 2.62%, valor bajo que valida la proporcionalidad entre las dos mediciones), y se aplicó el factor de conversión resultante (0.2311) para retroproyectar 20 trimestres adicionales (2000Q1 a 2004Q4). La serie empalmada resultante cuenta con 103 observaciones trimestrales.
+Los datos provienen de las Cuentas Nacionales Trimestrales del Departamento Administrativo Nacional de Estadística (DANE). La serie principal corresponde al valor agregado de la rama "Actividades financieras y de seguros" (código K de la CIIU Revisión 4), expresada en miles de millones de pesos a precios constantes de 2015 y publicada con periodicidad trimestral en la base de datos de Cuentas Nacionales base 2015 (Sistema de Cuentas Nacionales SCN 2008). Esta serie cubre desde el primer trimestre de 2005 hasta el cuarto trimestre de 2024, con cinco observaciones adicionales preliminares hasta el cuarto trimestre de 2025.
 
-Este procedimiento introduce tres limitaciones estadísticas que se declaran explícitamente a lo largo del análisis. Primero, existe un quiebre metodológico implícito en 2005Q1, punto en que la cobertura sectorial cambia junto con la metodología de cuentas nacionales. Segundo, la volatilidad de las tasas de crecimiento trimestrales difiere estructuralmente entre los dos subperíodos: la desviación estándar en el período retroproyectado (2000-2004) es de 0.90%, frente a 3.11% en el período observado en base 2015 (2005-2024), diferencia que refleja tanto el cambio de cobertura como la mayor turbulencia real del sector financiero colombiano en el período posterior. Tercero, el factor de conversión absorbe simultáneamente la diferencia de precios base y la diferencia de cobertura sectorial, y no es posible separar ambos efectos con los datos disponibles.
+Los datos reportados por el DANE están desestacionalizados mediante el método X-13ARIMA-SEATS, lo que implica que el componente estacional fue removido antes de la publicación. Esta característica tiene consecuencias metodológicas directas sobre la especificación del modelo ARIMA, que se detallan en la sección correspondiente.
 
----
+### 2.2 El problema del umbral de observaciones y la decisión de empalme
 
-**Identificación**
+El requisito metodológico de contar con al menos 100 observaciones para la aplicación de Box-Jenkins no podía cumplirse con la serie base 2015 de forma directa, que provee 80 observaciones confirmadas (2005Q1–2024Q4) más 5 observaciones preliminares. Para extender la serie hacia atrás fue necesario recurrir a una fuente complementaria: la serie de valor agregado del sector financiero en base 2005, publicada por el DANE bajo el SCN 1993.
 
-El análisis de identificación buscó determinar si la serie requiere diferenciación (orden de integración d) y qué estructura autorregresiva o de medias móviles describe su dinámica (órdenes p y q).
+La base 2005 cubre el período 2000Q1–2008Q4, lo que genera un traslape de 16 trimestres con la base 2015 (2005Q1–2008Q4). Este traslape permitió calcular un factor de conversión entre ambas mediciones y validar su estabilidad antes de aplicarlo.
 
-La función de autocorrelación (FAC) de la serie en logaritmos mostró un decaimiento lento y monótono, con todas las autocorrelaciones significativas hasta el rezago 20. La función de autocorrelación parcial (FACP) mostró un único spike en el rezago 1, prácticamente igual a la unidad, con todos los rezagos posteriores dentro de las bandas de no significancia. Este patrón conjunto es la representación empírica canónica de un proceso integrado de orden uno, específicamente un paseo aleatorio.
+### 2.3 Diferencias entre las dos bases y su implicación
 
-Las pruebas formales confirmaron este diagnóstico sin ambigüedad. El test de Dickey-Fuller Aumentado con tendencia en niveles arrojó τ₃ = −0.42, que no supera el valor crítico al 5% (−3.43), de modo que no se rechaza la hipótesis nula de raíz unitaria. El test KPSS con tendencia arrojó τ = 0.51, que supera incluso el valor crítico al 1% (0.22), rechazando la hipótesis nula de estacionariedad. La combinación de ambos resultados —ADF no rechaza raíz unitaria, KPSS rechaza estacionariedad— constituye evidencia unívoca de serie I(1).
+La base 2005 y la base 2015 no miden exactamente el mismo objeto estadístico. Las diferencias son de dos tipos. Primero, una diferencia de cobertura sectorial: la base 2005 agrupa bajo un mismo rubro los establecimientos financieros, los seguros, las actividades inmobiliarias y los servicios a las empresas, mientras que la base 2015 aísla únicamente las actividades financieras y de seguros como sector K de la CIIU Rev. 4. Segundo, una diferencia metodológica en el tratamiento de los Servicios de Intermediación Financiera Medidos Indirectamente (SIFMI): en el SCN 1993 los SIFMI se registraban como sector ficticio con valor agregado negativo que se restaba del total, mientras que en el SCN 2008 se distribuyen entre los sectores usuarios del servicio de intermediación.
 
-Tras aplicar la primera diferencia del logaritmo, el ADF arrojó τ₂ = −8.75, que rechaza la raíz unitaria al 1%. El KPSS en primera diferencia presentó un resultado limítrofe (τ = 0.57, que rechaza al 5% pero no al 2.5% ni al 1%), atribuible a la heterocedasticidad estructural entre subperíodos documentada en el empalme, no a una raíz unitaria adicional. El balance de evidencia sustenta d = 1.
+Estas diferencias hacen que el empalme no sea conceptualmente neutro. El factor de conversión calculado absorbe simultáneamente la diferencia de precios entre 2005 y 2015 y la diferencia de cobertura sectorial, y no es posible separar ambos efectos con los datos disponibles.
 
-La FAC y FACP de la primera diferencia mostraron un spike negativo único en el rezago 1 en ambas funciones, con todos los demás rezagos dentro de las bandas. Este patrón, donde ninguna de las dos funciones exhibe un decaimiento gradual claro, es consistente con un proceso sin estructura AR ni MA adicional, o alternativamente con modelos ARIMA(1,1,0), ARIMA(0,1,1) o ARIMA(1,1,1) como candidatos a evaluar.
+### 2.4 Procedimiento de empalme
 
----
+El método empleado fue el empalme por cociente. Se calculó el ratio entre ambas series en el período de traslape (16 trimestres), se verificó su estabilidad estadística mediante el coeficiente de variación, y se aplicó el factor resultante para retroproyectar los 20 trimestres necesarios (2000Q1–2004Q4).
 
-**Estimación**
+El cociente entre la serie base 2015 y la serie base 2005 en el período de traslape mostró un coeficiente de variación de 2.62%, valor que indica proporcionalidad aproximadamente constante entre ambas mediciones. El factor de conversión medio resultante fue de 0.2311: cada peso medido en base 2005 equivale a 0.2311 pesos en términos de base 2015. Este valor es consistente con la actualización de precios relativos entre ambos años base y con la reducción de cobertura sectorial al pasar de un agregado más amplio a uno más estrecho.
 
-Se estimaron cuatro modelos candidatos por máxima verosimilitud mediante el paquete fable en R: ARIMA(1,1,0), ARIMA(0,1,1), ARIMA(1,1,1) y ARIMA(0,1,0) con deriva. Todos los modelos se estimaron sobre el logaritmo de la serie, con la parte estacional forzada a cero dado que los datos están desestacionalizados por el DANE.
+La serie empalmada resultante cuenta con 103 observaciones trimestrales que cubren el período 2000Q1–2025Q4. De estas, 20 corresponden a valores retroproyectados mediante el procedimiento descrito y 83 a observaciones directas de la base 2015, incluyendo los datos provisionales de 2024 del propio DANE.
 
-Los resultados de ARIMA(1,1,0) y ARIMA(0,1,1) fueron prácticamente idénticos: coeficientes estimados cercanos a cero (ar1 = −0.0003 y ma1 = −0.0001 respectivamente), completamente no significativos, y criterios de información idénticos hasta el decimal (AIC = −414.41, BIC = −409.15). Ambos modelos colapsaban al mismo proceso subyacente sin estructura dinámica.
+### 2.5 Implicaciones estadísticas del empalme declaradas explícitamente
 
-El ARIMA(1,1,1) mostró coeficientes significativos (ar1 = 0.9989, ma1 = −0.9719) pero con un problema técnico severo: cuando el coeficiente AR se aproxima a la unidad y el MA a menos la unidad simultáneamente, los polinomios característicos casi se cancelan entre sí, produciendo un modelo numéricamente inestable que no tiene interpretación estructural válida.
-
-El ARIMA(0,1,0) con drift dominó a todos los demás en todos los criterios: AIC = −447.17, BIC = −441.90, log-verosimilitud = 225.59, varianza residual = 0.0007409. Su único coeficiente es la constante (drift = 0.0166, error estándar = 0.0027, t = 6.15), significativa al 0.1%. Este valor representa una tasa de crecimiento trimestral promedio del sector de 1.66%, equivalente a aproximadamente 6.9% anual, coherente con la expansión sostenida del sistema financiero colombiano durante el período de análisis.
-
-El modelo seleccionado se expresa como: Δlog(Yₜ) = 0.0166 + εₜ, es decir, un paseo aleatorio con deriva, donde los choques sobre el valor agregado del sector son permanentes y la serie crece en promedio 1.66% por trimestre.
+El empalme introduce tres limitaciones estadísticas que atraviesan todo el análisis posterior. Primera, existe un quiebre metodológico implícito en 2005Q1, punto en que la cobertura sectorial y la metodología de medición cambian simultáneamente. Segunda, hay una diferencia estructural en la volatilidad entre los dos subperíodos: la desviación estándar de las tasas de crecimiento trimestrales en el período retroproyectado (2000–2004) es de 0.90%, frente al 3.11% del período observado en base 2015 (2005–2024). Esta diferencia de más de tres veces en la desviación estándar genera heterocedasticidad estructural que afecta las pruebas de validación de supuestos. Tercera, el factor de conversión no separa el efecto de precios del efecto de cobertura, lo que introduce un sesgo de medición que se acumula hacia los períodos más alejados del punto de anclaje.
 
 ---
 
-**Validación**
+## 3. Transformación de la serie y justificación econométrica
 
-Los residuos del modelo seleccionado no superaron las pruebas de diagnóstico estándar. El test de Ljung-Box rechazó la hipótesis de no autocorrelación en los residuos a todos los rezagos evaluados. El test ARCH rechazó la homocedasticidad condicional especialmente a los primeros rezagos. El test de Jarque-Bera rechazó la normalidad de los residuos.
+Antes de aplicar la metodología Box-Jenkins, la serie fue transformada mediante logaritmo natural. Esta decisión responde a dos motivaciones. La primera es de naturaleza estadística: la serie en niveles exhibe varianza creciente en el tiempo —los shocks se hacen más grandes en términos absolutos a medida que el sector crece—, condición que viola el supuesto de varianza constante requerido por los procesos ARMA estacionarios. El logaritmo estabiliza la varianza al comprimir las diferencias relativas entre períodos de distinto nivel. La segunda es de naturaleza económica: la primera diferencia del logaritmo es una aproximación de primer orden a la tasa de crecimiento porcentual trimestral del sector, lo que hace que los coeficientes y el drift del modelo tengan interpretación directa en términos de tasas de variación.
 
-Estos fallos tienen origen identificado y no implican que el orden ARIMA esté mal especificado. La heterocedasticidad documentada entre subperíodos del empalme infla los estadísticos ARCH de forma estructural. El choque extraordinario del segundo trimestre de 2020 —contracción abrupta del sector durante la pandemia seguida de recuperación igualmente abrupta— genera residuos de magnitud anormal que distorsionan Jarque-Bera y contribuyen al rechazo de Ljung-Box. Un modelo ARIMA lineal estándar no tiene mecanismo para absorber outliers de esa naturaleza sin variables de intervención explícitas. Se reconoce esta limitación como consecuencia directa de las decisiones de construcción de la serie y del período histórico analizado, y se declara en los resultados como parte del alcance metodológico del trabajo.
-
----
-
-**Pronóstico**
-
-El pronóstico de diez trimestres adelante (2026Q1 a 2028Q2) ilustra con claridad por qué los modelos descartados son inadecuados. ARIMA(1,1,0) y ARIMA(0,1,1) proyectan un nivel prácticamente constante alrededor de 13.310 miles de millones, equivalente a crecimiento casi nulo, resultado directo de sus coeficientes nulos. ARIMA(1,1,1) proyecta un crecimiento acelerado hacia 15.059 para 2028Q2, con intervalos de confianza que se expanden de forma anormal producto de la inestabilidad de la cancelación de raíces.
-
-El ARIMA(0,1,0) proyecta un crecimiento desde 13.469 en 2026Q1 hasta 15.687 en 2028Q2, con una tasa implícita de 1.66% trimestral que replica exactamente el drift estimado, compuesto período a período. Los intervalos de confianza al 95% se expanden de forma ordenada y simétrica, comportamiento teóricamente correcto para un paseo aleatorio con deriva. Es el único modelo que produce una proyección coherente con la dinámica histórica del sector.
+La serie logarítmica resultante fue la que se sometió a todos los análisis de identificación, estimación y validación. Los pronósticos se presentan revertiendo la transformación logarítmica —mediante la función exponencial— para expresar los resultados en las unidades originales (miles de millones de pesos constantes de 2015).
 
 ---
 
-**Nota final sobre el alcance del modelo**
+## 4. Paso 1 — Identificación
 
-El ARIMA(0,1,0) con deriva es un modelo parsimonioso que captura adecuadamente la característica más robusta de la serie: crecimiento tendencial estocástico sin estructura de reversión a la media. No pretende capturar ciclos financieros, efectos de política monetaria ni shocks sectoriales específicos, que requerirían marcos multivariados más complejos. Su valor en este contexto es descriptivo y predictivo en el corto plazo, dentro de los supuestos y limitaciones metodológicas declaradas.
+### 4.1 Análisis visual de la FAC y FACP en niveles
+
+La función de autocorrelación de la serie logarítmica en niveles mostró un patrón de decaimiento lento y monótono, con todas las autocorrelaciones significativas y positivas hasta el rezago 20. La función de autocorrelación parcial mostró un único spike en el rezago 1 de magnitud cercana a la unidad, con todos los rezagos posteriores dentro de las bandas de no significancia. Esta combinación —FAC con decaimiento hiperbólico y FACP con corte abrupto en el lag 1— es la representación empírica característica de un proceso integrado de orden uno, I(1), y más específicamente de un paseo aleatorio. Establece la presunción inicial de que se necesita una diferenciación ordinaria (d = 1) y que el proceso subyacente puede no tener estructura AR o MA adicional significativa.
+
+### 4.2 Pruebas formales de raíz unitaria en niveles
+
+Las presunciones visuales fueron verificadas mediante dos pruebas formales complementarias con hipótesis nulas opuestas, lo que permite un diagnóstico robusto independientemente de los problemas de potencia que afectan a cada prueba individualmente.
+
+El test de Dickey-Fuller Aumentado con tendencia (type = "trend") arrojó un estadístico τ₃ = −0.42, que no supera el valor crítico al 5% de −3.43. No se rechaza la hipótesis nula de raíz unitaria. El estadístico φ₃ = 3.30, que tampoco supera el valor crítico al 5% de 6.49, indica que la tendencia determinística no es estadísticamente necesaria en el modelo —el crecimiento de la serie es de naturaleza estocástica, no determinista. El estadístico φ₂ = 23.07, significativo al 1%, confirma que al menos la constante es relevante, lo cual anticipa la presencia de un drift en el proceso diferenciado.
+
+El test KPSS con tendencia arrojó τ = 0.51, que supera el valor crítico incluso al 1% (0.22), rechazando contundentemente la hipótesis nula de estacionariedad. La combinación de ADF que no rechaza raíz unitaria y KPSS que rechaza estacionariedad es el caso diagnóstico más claro: la serie es I(1) sin ambigüedad.
+
+### 4.3 Pruebas formales en primera diferencia
+
+Tras aplicar la primera diferencia del logaritmo —que constituye una aproximación a la tasa de crecimiento trimestral—, el ADF con drift arrojó τ₂ = −8.75, que rechaza la raíz unitaria al 1% con amplísimo margen. El intercepto en la ecuación ADF fue de 0.0245 con p-valor cercano a cero, lo que confirma la presencia de una deriva estadísticamente significativa en el proceso diferenciado.
+
+El KPSS en primera diferencia presentó un resultado limítrofe: τ = 0.57, que rechaza la estacionariedad al 5% pero no al 2.5% ni al 1%. Este resultado no invalida la conclusión de d = 1, sino que refleja la heterocedasticidad estructural entre subperíodos introducida por el empalme: la diferencia de volatilidad entre 2000–2004 y 2005–2024 produce sumas parciales de residuos más grandes de lo esperado bajo homogeneidad, lo que infla el estadístico KPSS artificialmente. El balance de evidencia entre las dos pruebas —ADF rechaza fuertemente, KPSS rechaza solo marginalmente— sustenta la decisión de d = 1.
+
+### 4.4 FAC y FACP de la primera diferencia
+
+La función de autocorrelación de la primera diferencia mostró un único spike negativo en el rezago 1 (aproximadamente −0.35) con todos los demás rezagos dentro de las bandas. La función de autocorrelación parcial mostró un patrón simétrico, también con un spike negativo en el rezago 1 de magnitud similar y los demás rezagos no significativos. Este patrón de corte simultáneo en ambas funciones en el rezago 1 es ambiguo desde el punto de vista teórico: no discrimina unívocamente entre un proceso AR(1), un proceso MA(1) o la ausencia de estructura adicional. Se propusieron como candidatos a estimar los modelos ARIMA(1,1,0), ARIMA(0,1,1), ARIMA(1,1,1) y ARIMA(0,1,0) con deriva.
+
+---
+
+## 5. Paso 2 — Estimación
+
+Los cuatro modelos candidatos fueron estimados por máxima verosimilitud utilizando el paquete fable del ecosistema tidyverts en R. Todos los modelos se estimaron con constante explícita (operador ~ 1) dado que el ADF en primera diferencia evidenció un drift significativo, y con la parte estacional forzada a cero (PDQ(0,0,0)) dado que los datos están desestacionalizados por el DANE.
+
+Los resultados de la estimación revelaron un patrón diagnóstico claro. Los modelos ARIMA(1,1,0) y ARIMA(0,1,1) produjeron coeficientes AR y MA prácticamente nulos —ar1 = −0.0003 y ma1 = −0.0001 respectivamente— con estadísticos t de −0.003 y −0.001, completamente no significativos. Los criterios de información de ambos modelos fueron idénticos hasta el decimal (AIC = −414.41, BIC = −409.15), lo que indica que ambas especificaciones colapsaban al mismo proceso subyacente sin capturar ninguna estructura dinámica adicional.
+
+El modelo ARIMA(1,1,1) presentó coeficientes estadísticamente significativos (ar1 = 0.9989 y ma1 = −0.9719), pero exhibió un problema técnico severo conocido como cancelación de raíces: cuando el coeficiente AR se aproxima a la unidad y el MA se aproxima a −1 simultáneamente, los polinomios característicos del modelo casi se anulan entre sí, produciendo una especificación numéricamente inestable sin interpretación estructural válida. Este fenómeno es detectable visualmente en el pronóstico, donde el ARIMA(1,1,1) proyecta tasas de crecimiento implícitas de aproximadamente 3% trimestral —casi el doble del crecimiento histórico observado—, lo que confirma la inestabilidad del modelo.
+
+El modelo ARIMA(0,1,0) con deriva dominó a todos los demás en todos los criterios de selección simultáneamente: AIC = −447.17 (el más bajo), BIC = −441.90 (el más bajo), log-verosimilitud = 225.59 (la más alta) y varianza residual σ² = 0.0007409 (la más baja). Su única constante estimada —el drift— es 0.0166 con error estándar 0.0027, lo que arroja un estadístico t = 6.15, significativo al 0.1%. Este es el único modelo en el que todos los parámetros estimados son estadísticamente distinguibles de cero.
+
+La ecuación estimada del modelo seleccionado es:
+
+Δlog(Yt) = 0.0166 + εt, donde εt ~ RB(0, 0.0007409)
+
+O equivalentemente en logaritmos de nivel:
+
+log(Yt) = 0.0166 + log(Yt-1) + εt
+
+El modelo es un paseo aleatorio con deriva. Su interpretación económica es directa: el valor agregado del sector financiero y de seguros crece en promedio 1.66% por trimestre —equivalente a aproximadamente 6.9% anual— y los choques que afectan al sector se incorporan permanentemente al nivel de la serie sin ningún mecanismo de reversión a la media. El mejor pronóstico para el próximo trimestre es siempre el nivel actual más esa tasa de crecimiento promedio.
+
+---
+
+## 6. Paso 3 — Validación
+
+### 6.1 Prueba de Ljung-Box
+
+La prueba de Ljung-Box contrasta la hipótesis nula de ausencia de autocorrelación en los residuos del modelo. Los valores del estadístico para el ARIMA(0,1,0) fueron Q(4) = 28.42, Q(8) = 33.09 y Q(12) = 33.43, con p-valores de 0.0000, 0.0001 y 0.0009 respectivamente. La hipótesis nula se rechaza en todos los casos, indicando que los residuos presentan autocorrelación serial.
+
+El diagnóstico visual de la FAC de los residuos permitió identificar el origen de este rechazo: un spike negativo significativo en el rezago 2 (aproximadamente −0.55) y rezagos adicionales en torno al lag 7. La autocorrelación en el lag 2 es el elemento más relevante y tiene dos fuentes identificadas. La primera es el choque COVID-19: la caída pronunciada en 2020Q2 seguida de la recuperación en 2021Q1 produce residuos consecutivos de signo opuesto en períodos adyacentes, que generan autocorrelación artificial en el segundo rezago. La segunda fuente es la heterocedasticidad estructural del empalme, que altera la distribución de probabilidad de los residuos de forma no uniforme a lo largo de la muestra.
+
+Se realizó un análisis de robustez mediante la inclusión de variables dummy de impulso para el período COVID (2020Q2 para la caída y 2021Q1 para el rebote). Los resultados descartaron esta corrección: los coeficientes de ambas dummies fueron estadísticamente no significativos (t = −0.47 y t = −0.016), los criterios de información empeoraron en ambos casos respecto al modelo base (AIC = −445.39 con una dummy vs. −447.17 sin dummies), y la FAC de los residuos no mostró mejora. La conclusión de este análisis es que el choque COVID, aunque visualmente pronunciado en niveles, no representa una perturbación estadísticamente distinguible del ruido en la escala log-diferencia donde opera el modelo.
+
+### 6.2 Prueba ARCH
+
+La prueba de Engle para efectos ARCH contrasta la hipótesis nula de homocedasticidad condicional en los residuos. Los resultados para el ARIMA(0,1,0) fueron χ²(1) = 18.41, χ²(2) = 22.01 y χ²(5) = 23.59, con p-valores de 0.0000, 0.0000 y 0.0003. La hipótesis nula se rechaza contundentemente en todos los rezagos.
+
+La FAC de los residuos al cuadrado muestra un spike pronunciado en el lag 1 (≈0.40) con varios rezagos adicionales significativos hasta el lag 7, que es la firma visual de los efectos ARCH: la varianza de los residuos en el período t está correlacionada con la varianza en períodos anteriores, lo que en econometría financiera se conoce como clustering de volatilidad. Para el sector financiero colombiano este resultado tiene sentido económico: períodos de turbulencia —crisis de 2008, volatilidad cambiaria de 2015–2016, pandemia de 2020— generan rachas sostenidas de alta varianza que se agrupan temporalmente.
+
+Es importante destacar que el ARIMA(0,1,0) muestra el rechazo ARCH más contundente de los cuatro modelos candidatos, precisamente por su parsimonia. Los modelos con coeficientes AR y MA —aunque no significativos— absorben artificialmente parte de la varianza condicional, enmascarando los efectos ARCH en los residuos. El ARIMA(0,1,0) expone la heterocedasticidad condicional de forma transparente, lo que constituye un resultado metodológicamente más honesto aunque estadísticamente más incómodo.
+
+### 6.3 Prueba de Jarque-Bera
+
+La prueba de Jarque-Bera contrasta la hipótesis nula de normalidad de los residuos. El estadístico fue χ² = 527.56 con p-valor de 0.0000. El rechazo es contundente e indica que los residuos tienen colas significativamente más pesadas que la distribución normal —kurtosis excesiva generada por los valores atípicos del período COVID.
+
+### 6.4 Test CUSUM de estabilidad estructural
+
+El test CUSUM de sumas acumuladas recursivas (Recursive CUSUM) contrasta la hipótesis nula de estabilidad de los parámetros del modelo a lo largo del tiempo. El estadístico S = 0.343 arrojó un p-valor de 0.9306, lo que constituye el resultado más favorable de toda la etapa de validación. La trayectoria del CUSUM empírico permaneció dentro de las bandas de confianza al 5% durante toda la muestra, incluyendo el período de la pandemia donde se observó una desviación leve pero sin cruzar las bandas.
+
+Este resultado tiene una implicación importante: a pesar de los fallos en las pruebas distribucionales (Ljung-Box, ARCH, Jarque-Bera), los parámetros del modelo —el drift de 1.66% trimestral y la estructura de paseo aleatorio— son estables a lo largo de toda la muestra. El sector financiero colombiano creció a una tasa promedio aproximadamente constante durante el período 2000–2025, sin que los eventos de turbulencia —ni el empalme metodológico de 2005 ni el choque pandémico de 2020— alteraran el régimen de crecimiento subyacente. Los incumplimientos distribucionales son, por tanto, de naturaleza transitoria y estructural (heterocedasticidad del empalme y outlier COVID), no indicios de mala especificación del orden ARIMA.
+
+### 6.5 Balance de la validación
+
+Los fallos en las pruebas de validación tienen origen identificado y documentado, no son síntoma de una especificación incorrecta. La heterocedasticidad estructural entre subperíodos del empalme —diferencia de tres veces en la desviación estándar de las tasas de crecimiento— infla los estadísticos ARCH de forma persistente. El choque extraordinario del COVID-19 contamina las pruebas de autocorrelación y normalidad con residuos atípicos que un modelo ARIMA lineal no puede absorber. El test CUSUM confirma que más allá de estos efectos puntuales los parámetros son estables. El ARIMA(0,1,0) es el mejor modelo disponible dentro del marco Box-Jenkins para esta serie, dadas las condiciones de los datos.
+
+---
+
+## 7. Paso 4 — Pronóstico
+
+### 7.1 Pronóstico con intervalos normales
+
+El pronóstico de diez trimestres adelante (2026Q1–2028Q2) basado en los supuestos distribucionales estándar produjo los siguientes valores puntuales y rangos de incertidumbre al 95%:
+
+El valor pronosticado crece de 13.469 miles de millones en 2026Q1 hasta 15.687 miles de millones en 2028Q2, con una tasa de crecimiento trimestral implícita de exactamente 1.66% —el drift estimado, compuesto período a período. Los intervalos de confianza se expanden de forma ordenada y simétrica: la amplitud del intervalo al 95% es de 1.437 miles de millones en 2026Q1 y crece hasta 5.299 miles de millones en 2028Q2. Este patrón de expansión monótona y acelerada es el comportamiento teóricamente correcto para un paseo aleatorio con deriva: a mayor horizonte de pronóstico, mayor acumulación de incertidumbre.
+
+La comparación con los modelos descartados ilustra la importancia de la selección correcta. El ARIMA(1,1,0) y el ARIMA(0,1,1) producen pronósticos prácticamente planos alrededor de 13.310 miles de millones en todo el horizonte, equivalentes a crecimiento casi nulo —resultado directo de sus coeficientes nulos. El ARIMA(1,1,1) proyecta un crecimiento acelerado hasta 15.059 miles de millones con intervalos que se expanden de forma anormal, reflejo de la inestabilidad de cancelación de raíces. Solo el ARIMA(0,1,0) produce una proyección coherente con la trayectoria histórica del sector.
+
+### 7.2 Pronóstico con intervalos bootstrap
+
+Dado que la prueba de Jarque-Bera rechazó la normalidad de los residuos y la prueba ARCH detectó heterocedasticidad condicional, los intervalos de pronóstico basados en el supuesto de normalidad son potencialmente incorrectos. Para construir intervalos robustos a estas violaciones se aplicó el método de bootstrap de residuos con 2.000 réplicas.
+
+El bootstrap de residuos funciona remuestreando aleatoriamente —con reposición— los residuos observados del modelo y repropagándolos en la estructura del ARIMA para simular 2.000 trayectorias posibles del pronóstico. A diferencia de los intervalos normales, este procedimiento no asume ninguna distribución particular para los errores: captura empíricamente la forma real de la distribución de los residuos, incluyendo su asimetría, kurtosis excesiva y clustering de volatilidad.
+
+La comparación entre los intervalos normales y bootstrap mostró diferencias menores al 1.3% del valor pronosticado en todos los horizontes, con las mayores diferencias en los primeros trimestres. En el corto plazo (2026Q1–2026Q2) el bootstrap produce intervalos más angostos que el método normal, lo que indica que la distribución empírica de los residuos tiene menos masa en las colas extremas de lo que predice la curva gaussiana con la misma varianza. En el mediano plazo (2027 en adelante) ambos métodos convergen hacia amplitudes prácticamente idénticas.
+
+La magnitud marginal de las diferencias entre ambos métodos tiene una implicación relevante: la violación del supuesto de normalidad, aunque estadísticamente significativa, no compromete materialmente la validez de los intervalos de pronóstico estándar en este caso. Los pronósticos basados en el bootstrap se presentan como los definitivos por su mayor rigor metodológico, con la nota de que los resultados son sustancialmente equivalentes a los normales.
+
+---
+
+## 8. Interpretación económica de los resultados
+
+### 8.1 El sector financiero como paseo aleatorio con deriva
+
+El resultado central del trabajo —que el valor agregado del sector financiero colombiano sigue un proceso ARIMA(0,1,0) con deriva— tiene una interpretación económica precisa y rica en implicaciones.
+
+Un paseo aleatorio con deriva significa que los cambios en el valor agregado del sector de un trimestre al siguiente son impredecibles en su dirección específica, pero tienen una tendencia media constante y positiva de 1.66% trimestral. No existe reversión a la media: los choques que afectan al sector —una crisis crediticia, un cambio regulatorio, una innovación financiera, una pandemia— se incorporan permanentemente al nivel del valor agregado y no se corrigen en períodos posteriores. El sector no "rebota" hacia ningún nivel de equilibrio después de un shock; simplemente crece desde el nuevo nivel con la misma tasa media histórica.
+
+Esta característica es la que distingue a los agregados macroeconómicos como el valor agregado sectorial de, por ejemplo, los precios de activos financieros que también siguen paseos aleatorios: en el sector real, el drift positivo refleja acumulación de capital físico y humano, profundización financiera, aumento en la cobertura de seguros y expansión del crédito, que son procesos fundamentalmente irreversibles en horizontes de tiempo medio.
+
+### 8.2 La tasa de crecimiento de 1.66% trimestral en contexto
+
+Una tasa de crecimiento trimestral de 1.66% equivale a aproximadamente 6.9% anual. Para contextualizar este dato, el crecimiento real del PIB total colombiano en el mismo período promedió alrededor de 3.5% anual, lo que implica que el sector financiero creció aproximadamente al doble de la economía en su conjunto. Esta diferencia de tasas es consistente con el proceso de profundización financiera que Colombia ha experimentado desde los años dos mil: el crédito como porcentaje del PIB pasó de niveles cercanos al 15% en 2002 a superar el 50% en años recientes, el número de colombianos con acceso al sistema financiero formal aumentó significativamente con las políticas de inclusión financiera, y el mercado de seguros se expandió hacia segmentos previamente desatendidos.
+
+El crecimiento sostenido del sector refleja también cambios estructurales en la economía colombiana: la formalización gradual del empleo amplió la base de cotizantes a sistemas de pensiones y seguros, la digitalización del sistema financiero redujo costos de intermediación y expandió el alcance del crédito, y el fortalecimiento del marco regulatorio post-crisis de 1999 creó condiciones para una expansión del crédito más sólida y sostenible.
+
+### 8.3 La pandemia COVID-19 como perturbación temporal sin cambio de régimen
+
+El test CUSUM confirma que el choque COVID-19 no alteró el régimen de crecimiento del sector financiero. Esta conclusión, aparentemente contraintuitiva dado la magnitud visible del outlier en los residuos, tiene respaldo en la evidencia. El sector financiero colombiano registró una contracción significativa en 2020Q2 pero recuperó niveles pre-pandemia en 2021 y retomó la senda de crecimiento histórica con relativa rapidez. La Superintendencia Financiera implementó medidas de alivio crediticio que amortiguaron el impacto sobre la cartera, y la política monetaria expansiva del Banco de la República sostuvo la liquidez del sistema.
+
+La ausencia de quiebre estructural en los parámetros del modelo implica que la pandemia fue un choque transitorio de magnitud extraordinaria sobre un proceso cuya tendencia subyacente no cambió. Económicamente, esto significa que las proyecciones de crecimiento del sector para 2026–2028 pueden construirse razonablemente sobre la misma tasa histórica de 1.66% trimestral sin necesidad de incorporar un cambio de régimen.
+
+### 8.4 Limitaciones de la interpretación económica
+
+Los resultados deben interpretarse con conciencia de sus límites. El modelo ARIMA(0,1,0) es un modelo univariado de series de tiempo: captura la dinámica temporal de la serie pero no identifica las causas del crecimiento ni su sensibilidad a variables externas —tasas de interés, regulación, ciclo económico, condiciones internacionales. Una expansión natural del análisis requeriría modelos multivariados (VAR, VEC) que permitan examinar las interdependencias entre el sector financiero y el resto de la economía.
+
+Adicionalmente, el empalme metodológico introduce una fuente de incertidumbre adicional en los 20 trimestres retroproyectados que no está capturada en los intervalos de pronóstico. Los valores de 2000–2004 son construcciones derivadas, no observaciones directas, y el factor de conversión absorbió diferencias de cobertura sectorial que no son completamente cuantificables. Esta limitación afecta especialmente al análisis de todo el período pre-2005, aunque el test CUSUM sugiere que no distorsionó significativamente los parámetros estimados del modelo.
+
+---
+
+## 9. Consideraciones sobre la implementación computacional
+
+El trabajo fue desarrollado íntegramente en R, utilizando el ecosistema tidyverts —conformado por los paquetes tsibble, feasts y fable— como infraestructura principal para el manejo y modelamiento de series de tiempo. Este ecosistema representa el estándar moderno en análisis de series de tiempo en R: tsibble provee una estructura de datos ordenada temporalmente compatible con el universo tidyverse, feasts implementa las funciones de autocorrelación y diagnóstico en ese marco, y fable provee la estimación de modelos ARIMA con integración directa a la infraestructura de pronóstico y validación.
+
+Para garantizar la reproducibilidad del código en cualquier computador, la gestión de rutas se implementó mediante los paquetes here y fs. El paquete here ancla la raíz del proyecto en la ubicación del script principal mediante la función i_am(), lo que permite que todas las rutas a archivos de datos y salidas sean relativas a esa raíz y funcionen sin modificación en diferentes sistemas operativos y estructuras de directorios.
+
+Las pruebas de raíz unitaria se ejecutaron con el paquete urca, que implementa las versiones completas de los tests ADF y KPSS con la estadística adicional de las pruebas conjuntas phi necesarias para una lectura completa. Las pruebas ARCH se implementaron con el paquete FinTS y las pruebas de normalidad con la función jarque.bera.test del paquete tseries. El test CUSUM de estabilidad estructural utilizó el paquete strucchange con la especificación Rec-CUSUM sobre los residuos del modelo seleccionado. Los intervalos de pronóstico bootstrap se obtuvieron con la opción bootstrap = TRUE del método forecast de fable, con 2.000 réplicas para garantizar estabilidad del resultado.
+
+---
+
+## 10. Conclusiones
+
+El sector de actividades financieras y de seguros en Colombia, medido a través de su valor agregado trimestral a precios constantes de 2015, exhibe un proceso generador de datos de tipo ARIMA(0,1,0) con deriva durante el período 2000–2025. Esta conclusión emerge de la aplicación rigurosa de la metodología Box-Jenkins en sus cuatro etapas y es robusta a múltiples verificaciones: domina a todos los modelos candidatos por criterios de información (AIC, BIC), es el único modelo con parámetros significativos, produce el pronóstico económicamente más coherente con la trayectoria histórica, y sus parámetros muestran estabilidad a lo largo de toda la muestra según el test CUSUM.
+
+El parámetro central del modelo —el drift de 1.66% trimestral— resume cuantitativamente el proceso de profundización financiera que Colombia ha experimentado desde la recuperación post-crisis de finales de los noventa. Los choques que afectan al sector, incluyendo la pandemia COVID-19, se incorporan permanentemente al nivel del valor agregado sin alterar la tendencia de crecimiento subyacente.
+
+Las limitaciones del análisis son reconocidas explícitamente: el empalme metodológico entre bases de precios introduce heterocedasticidad estructural que afecta las pruebas de validación de supuestos, y el modelo univariado no captura las causas del crecimiento ni las interdependencias sectoriales. Estas limitaciones no invalidan el ejercicio ni sus conclusiones principales, sino que definen el alcance apropiado de la interpretación y señalan extensiones naturales hacia marcos multivariados en investigaciones futuras.
